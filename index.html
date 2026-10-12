@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hostel Finder</title>
+<style>
+  :root {
+    --ink: #14213d;
+    --paper: #f6f7f9;
+    --card: #ffffff;
+    --line: #dde2ea;
+    --green: #1e7b4f;
+    --gold: #e8a317;
+    --muted: #5b6577;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 28px 18px 24px;
+    border-bottom: 6px solid var(--gold);
+  }
+  header h1 { font-size: 1.6rem; line-height: 1.2; max-width: 20ch; }
+  header p { margin-top: 8px; color: #c5cde0; max-width: 40ch; }
+  .tools {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 16px 18px; background: #fff; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .tools input, .tools select {
+    font: inherit; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff; color: var(--ink);
+  }
+  .tools input { flex: 1 1 200px; }
+  .tools input:focus-visible, .tools select:focus-visible, a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--gold); outline-offset: 2px;
+  }
+  main { padding: 18px; max-width: 1000px; margin: 0 auto; }
+  .count { color: var(--muted); margin-bottom: 14px; font-size: .95rem; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .photo {
+    aspect-ratio: 16 / 10; background: #dfe5ee center / cover no-repeat;
+    display: flex; align-items: flex-end; justify-content: space-between; padding: 10px;
+  }
+  .photo.empty { background: linear-gradient(135deg, #cfd8e6, #e7ecf4); color: var(--muted); align-items: center; justify-content: center; font-size: .9rem; }
+  .price {
+    background: var(--ink); color: #fff; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px; font-size: .95rem;
+  }
+  .rooms { background: var(--green); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: .85rem; }
+  .rooms.none { background: #9aa3b2; }
+  .body { padding: 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .body h2 { font-size: 1.15rem; }
+  .meta { color: var(--muted); font-size: .92rem; }
+  .actions { display: flex; gap: 8px; margin-top: auto; padding-top: 10px; }
+  .btn {
+    flex: 1; text-align: center; text-decoration: none; font-weight: 600;
+    padding: 10px; border-radius: 8px; font-size: .95rem;
+  }
+  .btn.call { background: var(--ink); color: #fff; }
+  .btn.wa { background: #fff; color: var(--green); border: 2px solid var(--green); }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px 10px; }
+  footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 24px 18px 40px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Find a registered hostel near campus</h1>
+  <p>Only hostels registered with the authorities are listed here.</p>
+</header>
+
+<div class="tools">
+  <input id="search" type="search" placeholder="Search by name, location or landmark" aria-label="Search hostels">
+  <select id="sort" aria-label="Sort hostels">
+    <option value="low">Price: low to high</option>
+    <option value="high">Price: high to low</option>
+  </select>
+</div>
+
+<main>
+  <p class="count" id="count"></p>
+  <section class="grid" id="list"></section>
+</main>
+
+<footer>Sample data for now. Replace it with real hostels in the list below.</footer>
+
+<script>
+  // ------------------------------------------------------------------
+  // EDIT THIS LIST. One block per hostel.
+  // phone: write it the normal way, e.g. 0240000001
+  // image: paste a picture link, or leave "" to show a grey box
+  // roomsAvailable: set to 0 when the rooms are taken
+  // ------------------------------------------------------------------
+  const hostels = [
+    {
+      name: "Sample Hostel One",
+      owner: "Mr. Mensah",
+      phone: "0240000001",
+      location: "Ola, Cape Coast",
+      landmark: "Behind the main gate",
+      price: 1800,
+      roomsAvailable: 4,
+      image: ""
+    },
+    {
+      name: "Sample Hostel Two",
+      owner: "Madam Ama",
+      phone: "0240000002",
+      location: "Kwaprow, Cape Coast",
+      landmark: "Near the filling station",
+      price: 2500,
+      roomsAvailable: 0,
+      image: ""
+    },
+    {
+      name: "Sample Hostel Three",
+      owner: "Mr. Kofi",
+      phone: "0240000003",
+      location: "Abura, Cape Coast",
+      landmark: "Opposite the market",
+      price: 1200,
+      roomsAvailable: 9,
+      image: ""
+    }
+  ];
+
+  const listEl = document.getElementById("list");
+  const countEl = document.getElementById("count");
+  const searchEl = document.getElementById("search");
+  const sortEl = document.getElementById("sort");
+
+  function intl(phone) {
+    // 0240000001 -> 233240000001 for WhatsApp links
+    return "233" + phone.replace(/\D/g, "").replace(/^0/, "");
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function render() {
+    const q = searchEl.value.trim().toLowerCase();
+    let items = hostels.filter(h =>
+      (h.name + " " + h.location + " " + h.landmark).toLowerCase().includes(q)
+    );
+    items.sort((a, b) => sortEl.value === "low" ? a.price - b.price : b.price - a.price);
+
+    countEl.textContent = items.length + (items.length === 1 ? " hostel found" : " hostels found");
+
+    if (!items.length) {
+      listEl.innerHTML = '<p class="empty-state">No hostel matches your search. Try a different name or area.</p>';
+      return;
+    }
+
+    listEl.innerHTML = items.map(h => {
+      const photo = h.image
+        ? `<div class="photo" style="background-image:url('${esc(h.image)}')" role="img" aria-label="Photo of ${esc(h.name)}">`
+        : `<div class="photo empty">No photo yet`;
+      const rooms = h.roomsAvailable > 0
+        ? `<span class="rooms">${h.roomsAvailable} room${h.roomsAvailable > 1 ? "s" : ""} left</span>`
+        : `<span class="rooms none">Rooms taken</span>`;
+      const msg = encodeURIComponent("Hello, I found " + h.name + " on Hostel Finder. Is a room still available?");
+      return `
+        <article class="card">
+          ${photo}<span class="price">GH₵ ${h.price.toLocaleString()}</span>${rooms}</div>
+          <div class="body">
+            <h2>${esc(h.name)}</h2>
+            <p class="meta">${esc(h.location)}</p>
+            <p class="meta">Landmark: ${esc(h.landmark)}</p>
+            <p class="meta">Owner: ${esc(h.owner)}</p>
+            <div class="actions">
+              <a class="btn call" href="tel:${esc(h.phone)}">Call</a>
+              <a class="btn wa" href="https://wa.me/${intl(h.phone)}?text=${msg}" target="_blank" rel="noopener">WhatsApp</a>
+            </div>
+          </div>
+        </article>`;
+    }).join("");
+  }
+
+  searchEl.addEventListener("input", render);
+  sortEl.addEventListener("change", render);
+  render();
+</script>
+</body>
+  </html>
+  
